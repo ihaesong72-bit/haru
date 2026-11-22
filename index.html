@@ -88,6 +88,18 @@ input[type=range]{width:100%;accent-color:var(--blue);margin:4px 0 0}
 .cb{display:flex;gap:8px}.cb button{border:0;border-radius:10px;padding:8px 14px;font-weight:700}.go2{background:var(--blue);color:#fff}.gh{background:transparent;color:var(--mute)}
 @media (prefers-reduced-motion:no-preference){.calt svg{transition:transform .2s}}
 @media (prefers-reduced-motion:no-preference){.fill{transition:width .25s}.chk,.day b,.dot{transition:background .15s}}
+.nav{margin-left:auto}
+.help{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);background:none;color:var(--mute);font-weight:700;font-size:14px;margin-left:8px;margin-bottom:2px;padding:0}
+.help:hover{color:var(--blue);border-color:var(--blue)}
+.tour{position:fixed;inset:0;z-index:20}
+.tl{position:absolute;border-radius:16px;box-shadow:0 0 0 100vmax rgba(10,20,40,.62);pointer-events:none;outline:2px solid #fff}
+.tb{position:absolute;width:min(300px,calc(100vw - 32px));background:var(--bg);color:var(--ink);border-radius:16px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.tb p{margin:0 0 12px;font-size:15px;line-height:1.55;font-weight:500;position:relative}
+.ta{position:absolute;width:14px;height:14px;background:var(--bg);transform:rotate(45deg);border-radius:3px}
+.up .ta{top:-6px}.dn .ta{bottom:-6px}.mid .ta{display:none}
+.tf{display:flex;align-items:center;gap:8px;position:relative}.tc{flex:1;font-size:12px;color:var(--mute)}
+.tf button{border:0;border-radius:10px;padding:8px 14px;font-weight:700}.sk{background:none;color:var(--mute)}.nx{background:var(--blue);color:#fff}
+@media (prefers-reduced-motion:no-preference){.tl{transition:left .25s,top .25s,width .25s,height .25s}}
 </style>
 </head>
 <body>
@@ -95,7 +107,7 @@ input[type=range]{width:100%;accent-color:var(--blue);margin:4px 0 0}
   <header>
     <div><h1 id="title"></h1><div class="subt" id="subt"></div></div>
     <div class="nav" id="nav"><button id="prev" aria-label="이전">‹</button><button id="tdy" class="tdy">오늘</button><button id="next" aria-label="다음">›</button></div>
-  </header>
+  <button class="help" id="help" aria-label="사용법 보기">?</button></header>
   <main id="main"></main>
 </div>
 <button class="fab" id="fab" aria-label="추가">+</button>
@@ -265,7 +277,41 @@ $("tabs").onclick=function(e){var b=e.target.closest("button");if(b){tab=b.datas
 $("prev").onclick=function(){nav(-1)};
 $("next").onclick=function(){nav(1)};
 $("tdy").onclick=function(){sel=todayKey;render()};
+var TOUR=[
+  {t:null,x:"하루결에 오신 걸 환영해요! 30초만 둘러볼까요?"},
+  {t:".week",x:"날짜를 누르면 그날의 일정, 루틴, 마감 과제를 볼 수 있어요."},
+  {t:".calt",x:"이 화살표를 누르면 한 달 달력이 펼쳐져요."},
+  {t:"#fab",x:"여기서 일정이나 루틴을 추가해요. 카테고리도 직접 만들어 저장할 수 있어요."},
+  {t:"#tabs button[data-t=tasks]",x:"과제 탭에서 마감일과 진행률(%)을 기록하면, 하루에 얼마나 해야 하는지 알려드려요."}
+],tr=null,ti=0,tl,tb,tx,tc,nx,sk;
+function endTour(){if(tr){tr.remove();tr=null}try{localStorage.setItem("haruguel-tour","1")}catch(e){}}
+function place(){
+  var st=TOUR[ti],el=st.t?document.querySelector(st.t):null;
+  tx.textContent=st.x;tc.textContent=(ti+1)+" / "+TOUR.length;nx.textContent=ti===TOUR.length-1?"시작하기":"다음";
+  tb.style.cssText="";
+  if(!el){tl.style.display="none";tb.className="tb mid";tb.style.left="50%";tb.style.top="50%";tb.style.transform="translate(-50%,-50%)";return}
+  el.scrollIntoView({block:"center"});
+  var r=el.getBoundingClientRect(),pd=6,bw=Math.min(300,innerWidth-32);
+  tl.style.display="block";tl.style.left=r.left-pd+"px";tl.style.top=r.top-pd+"px";tl.style.width=r.width+pd*2+"px";tl.style.height=r.height+pd*2+"px";
+  var left=Math.max(16,Math.min(innerWidth-bw-16,r.left+r.width/2-bw/2)),cx=r.left+r.width/2-left-7;
+  tb.style.left=left+"px";tb.firstChild.style.left=Math.max(14,Math.min(bw-28,cx))+"px";
+  if(innerHeight-r.bottom>=190){tb.className="tb up";tb.style.top=r.bottom+pd+14+"px"}
+  else{tb.className="tb dn";tb.style.bottom=innerHeight-r.top+pd+14+"px"}
+}
+function tour(i){
+  if(!tr){
+    tr=h("div","tour");tr.setAttribute("role","dialog");tr.setAttribute("aria-label","사용법");
+    tl=h("div","tl");tb=h("div","tb");tx=h("p");tc=h("span","tc");sk=h("button","sk","건너뛰기");nx=h("button","nx","다음");
+    var ft=h("div","tf");ft.append(tc,sk,nx);tb.append(h("i","ta"),tx,ft);tr.append(tl,tb);document.body.appendChild(tr);
+    sk.onclick=endTour;nx.onclick=function(){if(ti>=TOUR.length-1)endTour();else tour(ti+1)};
+  }
+  ti=i;place();nx.focus();
+}
+$("help").onclick=function(){tab="today";render();tour(0)};
+window.addEventListener("resize",function(){if(tr)place()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&tr)endTour()});
 render();
+try{if(!localStorage.getItem("haruguel-tour"))setTimeout(function(){tab="today";render();tour(0)},500)}catch(e){}
 </script>
 </body>
 </html>
